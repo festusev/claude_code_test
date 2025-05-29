@@ -13,8 +13,8 @@ python -m pytest -v                              # Run with verbose output
 
 ### Running the interpreter
 ```bash
-python lisp_to_python.py                         # Run example demonstrations
-python -c "from lisp_to_python import LispToPythonInterpreter; print(LispToPythonInterpreter().interpret('(+ 1 2)'))"
+python lisp_to_python.py example.lisp output.py   # Convert Lisp file to Python file
+python -c "from lisp_to_python import LispToPythonInterpreter; print(LispToPythonInterpreter().interpret('(+ 1 2)'))"  # Interactive usage
 ```
 
 ### Type checking
@@ -48,3 +48,6 @@ Tests are organized by component (`TestTokenizer`, `TestParser`, `TestPythonGene
 - Test files should follow the existing naming convention (e.g., `test_*.py`)
 - Tests should cover both happy path and edge cases where applicable
 - GitHub CI workflow automatically runs tests on all PRs - tests must pass before merging
+- All changed code should be clean and readable
+- This repository should use the ArgParse library exclusively for command-line argument parsing
+- The README.md should always be updated appropriately

@@ -278,32 +278,65 @@ class LispToPythonInterpreter:
 
 
 def main():
+    import argparse
+    import os
+    
+    parser = argparse.ArgumentParser(description='Convert Lisp files to Python')
+    parser.add_argument('input_file', help='Input Lisp file (.lisp extension recommended)')
+    parser.add_argument('output_file', help='Output Python file (.py extension recommended)')
+    args = parser.parse_args()
+    
+    input_file = args.input_file
+    output_file = args.output_file
+    
+    # Input validation
+    if not os.path.exists(input_file):
+        print(f"Error: Input file '{input_file}' not found")
+        exit(1)
+    
+    if not input_file.lower().endswith('.lisp'):
+        print(f"Warning: Input file '{input_file}' does not have .lisp extension")
+    
+    if not output_file.lower().endswith('.py'):
+        print(f"Warning: Output file '{output_file}' does not have .py extension")
+    
+    # Check if output directory exists and is writable
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        print(f"Error: Output directory '{output_dir}' does not exist")
+        exit(1)
+    
+    if output_dir and not os.access(output_dir, os.W_OK):
+        print(f"Error: Output directory '{output_dir}' is not writable")
+        exit(1)
+    
     interpreter = LispToPythonInterpreter()
     
-    # Example usage
-    examples = [
-        "(+ 1 2)",
-        "(* (+ 1 2) 3)",
-        "(define x 10)",
-        "(defun square (x) (* x x))",
-        "(if (> x 5) 1 0)",
-        "(lambda (x y) (+ x y))",
-        "(+ 1 2 3 4)",
-    ]
-    
-    print("Lisp to Python Interpreter Examples:")
-    print("=" * 40)
-    
-    for lisp_expr in examples:
-        try:
-            python_code = interpreter.interpret(lisp_expr)
-            print(f"Lisp:   {lisp_expr}")
-            print(f"Python: {python_code}")
-            print()
-        except Exception as e:
-            print(f"Lisp:   {lisp_expr}")
-            print(f"Error:  {e}")
-            print()
+    try:
+        with open(input_file, 'r') as f:
+            lisp_code = f.read()
+        
+        # Handle multiple expressions
+        results = interpreter.interpret_multiple(lisp_code)
+        
+        with open(output_file, 'w') as f:
+            for result in results:
+                f.write(result + '\n')
+        
+        print(f"Converted {len(results)} expressions from {input_file} to {output_file}")
+        
+    except FileNotFoundError as e:
+        print(f"Error: File not found - {e}")
+        exit(1)
+    except PermissionError as e:
+        print(f"Error: Permission denied - {e}")
+        exit(1)
+    except SyntaxError as e:
+        print(f"Error: Lisp syntax error - {e}")
+        exit(1)
+    except Exception as e:
+        print(f"Error: Unexpected error occurred - {e}")
+        exit(1)
 
 
 if __name__ == "__main__":
