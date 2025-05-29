@@ -43,6 +43,8 @@ class Tokenizer:
                 self.pos += 1
             elif char == ';':
                 self._skip_comment()
+            elif char == '"':
+                tokens.append(self._read_string())
             elif char.isdigit() or (char == '-' and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit()):
                 tokens.append(self._read_number())
             elif char.isalpha() or char in '+-*/=<>!':
@@ -74,6 +76,19 @@ class Tokenizer:
                (self.text[self.pos].isalnum() or self.text[self.pos] in '+-*/=<>!?-_')):
             self.pos += 1
         return Token('SYMBOL', self.text[start:self.pos])
+    
+    def _read_string(self) -> Token:
+        start = self.pos
+        self.pos += 1  # Skip opening quote
+        while self.pos < len(self.text) and self.text[self.pos] != '"':
+            if self.text[self.pos] == '\\' and self.pos + 1 < len(self.text):
+                self.pos += 2  # Skip escape sequence
+            else:
+                self.pos += 1
+        if self.pos >= len(self.text):
+            raise SyntaxError("Unterminated string literal")
+        self.pos += 1  # Skip closing quote
+        return Token('STRING', self.text[start:self.pos])
 
 
 class ASTNode:
@@ -86,6 +101,10 @@ class NumberNode(ASTNode):
 @dataclass 
 class SymbolNode(ASTNode):
     name: str
+
+@dataclass
+class StringNode(ASTNode):
+    value: str
 
 @dataclass
 class ListNode(ASTNode):
@@ -110,6 +129,9 @@ class Parser:
             self.pos += 1
             value = float(token.value) if '.' in token.value else int(token.value)
             return NumberNode(value)
+        elif token.type == 'STRING':
+            self.pos += 1
+            return StringNode(token.value)
         elif token.type == 'SYMBOL':
             self.pos += 1
             return SymbolNode(token.value)
@@ -144,6 +166,8 @@ class PythonGenerator:
             return str(node.value)
         elif isinstance(node, SymbolNode):
             return node.name
+        elif isinstance(node, StringNode):
+            return node.value  # Keep the quotes
         elif isinstance(node, ListNode):
             return self._generate_list(node)
         else:
@@ -165,6 +189,14 @@ class PythonGenerator:
                 return self._generate_if(node.elements[1:])
             elif first.name == 'lambda':
                 return self._generate_lambda(node.elements[1:])
+            elif first.name == 'let':
+                return self._generate_let(node.elements[1:])
+            elif first.name == 'cond':
+                return self._generate_cond(node.elements[1:])
+            elif first.name in ['car', 'cdr', 'cons']:
+                return self._generate_list_op(first.name, node.elements[1:])
+            elif first.name in ['length', 'append']:
+                return self._generate_list_builtin(first.name, node.elements[1:])
             else:
                 # Function call
                 func_name = self.generate(first)
@@ -240,6 +272,78 @@ class PythonGenerator:
         body = self.generate(args[1])
         
         return f"lambda {', '.join(params)}: {body}"
+    
+    def _generate_let(self, args: List[ASTNode]) -> str:
+        if len(args) != 2:
+            raise SyntaxError("let requires exactly 2 arguments")
+        
+        if not isinstance(args[0], ListNode):
+            raise SyntaxError("let bindings must be a list")
+        
+        bindings = args[0].elements
+        body = self.generate(args[1])
+        
+        # Convert let bindings to lambda application: (let ((x 1) (y 2)) body) -> ((lambda (x y) body) 1 2)
+        if not bindings:
+            return body
+        
+        # Extract variable names and values
+        var_names = []
+        values = []
+        for binding in bindings:
+            if not isinstance(binding, ListNode) or len(binding.elements) != 2:
+                raise SyntaxError("let binding must be a list of [var value]")
+            var_names.append(self.generate(binding.elements[0]))
+            values.append(self.generate(binding.elements[1]))
+        
+        params = ', '.join(var_names)
+        args_str = ', '.join(values)
+        return f"(lambda {params}: {body})({args_str})"
+    
+    def _generate_cond(self, args: List[ASTNode]) -> str:
+        if len(args) == 0:
+            raise SyntaxError("cond requires at least one clause")
+        
+        # Build nested if-else expression
+        result = "None"
+        for clause in reversed(args):
+            if not isinstance(clause, ListNode) or len(clause.elements) != 2:
+                raise SyntaxError("cond clause must be [condition expression]")
+            
+            condition = self.generate(clause.elements[0])
+            expression = self.generate(clause.elements[1])
+            
+            result = f"({expression} if {condition} else {result})"
+        
+        return result
+    
+    def _generate_list_op(self, op: str, args: List[ASTNode]) -> str:
+        if op == 'car':
+            if len(args) != 1:
+                raise SyntaxError("car requires exactly 1 argument")
+            return f"{self.generate(args[0])}[0]"
+        elif op == 'cdr':
+            if len(args) != 1:
+                raise SyntaxError("cdr requires exactly 1 argument")
+            return f"{self.generate(args[0])}[1:]"
+        elif op == 'cons':
+            if len(args) != 2:
+                raise SyntaxError("cons requires exactly 2 arguments")
+            return f"[{self.generate(args[0])}] + {self.generate(args[1])}"
+        else:
+            raise ValueError(f"Unknown list operation: {op}")
+    
+    def _generate_list_builtin(self, op: str, args: List[ASTNode]) -> str:
+        if op == 'length':
+            if len(args) != 1:
+                raise SyntaxError("length requires exactly 1 argument")
+            return f"len({self.generate(args[0])})"
+        elif op == 'append':
+            if len(args) != 2:
+                raise SyntaxError("append requires exactly 2 arguments")
+            return f"{self.generate(args[0])} + {self.generate(args[1])}"
+        else:
+            raise ValueError(f"Unknown list builtin: {op}")
 
 
 class LispToPythonInterpreter:
