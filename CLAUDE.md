@@ -47,7 +47,8 @@ Tests are organized by component (`TestTokenizer`, `TestParser`, `TestPythonGene
 - All tests must pass before code review approval  
 - Test files should follow the existing naming convention (e.g., `test_*.py`)
 - Tests should cover both happy path and edge cases where applicable
-- GitHub CI workflow automatically runs tests on all PRs - tests must pass before merging
+- GitHub CI workflow automatically runs tests and type checking on all PRs - both must pass before merging
 - All changed code should be clean and readable
 - This repository should use the ArgParse library exclusively for command-line argument parsing
-- The README.md should always be updated appropriately
+- No linter errors should be thrown
+- MyPy type checking must pass with no errors
