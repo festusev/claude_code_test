@@ -6,7 +6,7 @@ Test suite for the Lisp to Python interpreter.
 import pytest
 from lisp_to_python import (
     Tokenizer, Token, Parser, PythonGenerator, LispToPythonInterpreter,
-    NumberNode, SymbolNode, StringNode, ListNode, ASTNode
+    NumberNode, SymbolNode, StringNode, ListNode
 )
 
 

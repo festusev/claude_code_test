@@ -11,6 +11,7 @@ Examples:
 """
 
 import re
+import sys
 from typing import List, Union, Any
 from dataclasses import dataclass
 
@@ -396,7 +397,7 @@ def main():
     # Input validation
     if not os.path.exists(input_file):
         print(f"Error: Input file '{input_file}' not found")
-        exit(1)
+        sys.exit(1)
     
     if not input_file.lower().endswith('.lisp'):
         print(f"Warning: Input file '{input_file}' does not have .lisp extension")
@@ -408,11 +409,11 @@ def main():
     output_dir = os.path.dirname(output_file)
     if output_dir and not os.path.exists(output_dir):
         print(f"Error: Output directory '{output_dir}' does not exist")
-        exit(1)
+        sys.exit(1)
     
     if output_dir and not os.access(output_dir, os.W_OK):
         print(f"Error: Output directory '{output_dir}' is not writable")
-        exit(1)
+        sys.exit(1)
     
     interpreter = LispToPythonInterpreter()
     
@@ -431,16 +432,16 @@ def main():
         
     except FileNotFoundError as e:
         print(f"Error: File not found - {e}")
-        exit(1)
+        sys.exit(1)
     except PermissionError as e:
         print(f"Error: Permission denied - {e}")
-        exit(1)
+        sys.exit(1)
     except SyntaxError as e:
         print(f"Error: Lisp syntax error - {e}")
-        exit(1)
+        sys.exit(1)
     except Exception as e:
         print(f"Error: Unexpected error occurred - {e}")
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
