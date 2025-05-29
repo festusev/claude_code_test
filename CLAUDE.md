@@ -49,5 +49,5 @@ Tests are organized by component (`TestTokenizer`, `TestParser`, `TestPythonGene
 - Tests should cover both happy path and edge cases where applicable
 - GitHub CI workflow automatically runs tests on all PRs - tests must pass before merging
 - All changed code should be clean and readable
-- This repository uses Argparse exclusively
+- This repository should use the ArgParse library exclusively for command-line argument parsing
 - The README.md should always be updated appropriately
