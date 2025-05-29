@@ -13,7 +13,7 @@ python -m pytest -v                              # Run with verbose output
 
 ### Running the interpreter
 ```bash
-python lisp_to_python.py input.lisp output.py   # Convert Lisp file to Python file
+python lisp_to_python.py example.lisp output.py   # Convert Lisp file to Python file
 python -c "from lisp_to_python import LispToPythonInterpreter; print(LispToPythonInterpreter().interpret('(+ 1 2)'))"  # Interactive usage
 ```
 
