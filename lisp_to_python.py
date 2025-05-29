@@ -278,32 +278,36 @@ class LispToPythonInterpreter:
 
 
 def main():
+    import sys
+    
+    if len(sys.argv) != 3:
+        print("Usage: python lisp_to_python.py <input_file> <output_file>")
+        sys.exit(1)
+    
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    
     interpreter = LispToPythonInterpreter()
     
-    # Example usage
-    examples = [
-        "(+ 1 2)",
-        "(* (+ 1 2) 3)",
-        "(define x 10)",
-        "(defun square (x) (* x x))",
-        "(if (> x 5) 1 0)",
-        "(lambda (x y) (+ x y))",
-        "(+ 1 2 3 4)",
-    ]
-    
-    print("Lisp to Python Interpreter Examples:")
-    print("=" * 40)
-    
-    for lisp_expr in examples:
-        try:
-            python_code = interpreter.interpret(lisp_expr)
-            print(f"Lisp:   {lisp_expr}")
-            print(f"Python: {python_code}")
-            print()
-        except Exception as e:
-            print(f"Lisp:   {lisp_expr}")
-            print(f"Error:  {e}")
-            print()
+    try:
+        with open(input_file, 'r') as f:
+            lisp_code = f.read()
+        
+        # Handle multiple expressions
+        results = interpreter.interpret_multiple(lisp_code)
+        
+        with open(output_file, 'w') as f:
+            for result in results:
+                f.write(result + '\n')
+        
+        print(f"Converted {len(results)} expressions from {input_file} to {output_file}")
+        
+    except FileNotFoundError:
+        print(f"Error: Input file '{input_file}' not found")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
