@@ -6,7 +6,7 @@ Test suite for the Lisp to Python interpreter.
 import pytest
 from lisp_to_python import (
     Tokenizer, Token, Parser, PythonGenerator, LispToPythonInterpreter,
-    NumberNode, SymbolNode, ListNode, ASTNode
+    NumberNode, SymbolNode, StringNode, ListNode
 )
 
 
@@ -466,3 +466,136 @@ class TestIntegration:
         for lisp_code, expected in examples:
             result = interpreter.interpret(lisp_code)
             assert result == expected
+
+
+class TestStringLiterals:
+    def test_tokenize_string_literal(self):
+        tokenizer = Tokenizer('(print "Hello, World!")')
+        tokens = tokenizer.tokenize()
+        string_tokens = [t for t in tokens if t.type == 'STRING']
+        assert len(string_tokens) == 1
+        assert string_tokens[0].value == '"Hello, World!"'
+
+    def test_tokenize_string_with_escapes(self):
+        tokenizer = Tokenizer(r'(print "Hello\nWorld")')
+        tokens = tokenizer.tokenize()
+        string_tokens = [t for t in tokens if t.type == 'STRING']
+        assert len(string_tokens) == 1
+        assert string_tokens[0].value == r'"Hello\nWorld"'
+
+    def test_parse_string_literal(self):
+        tokens = [Token('STRING', '"test"')]
+        parser = Parser(tokens)
+        ast = parser.parse()
+        assert isinstance(ast, StringNode)
+        assert ast.value == '"test"'
+
+    def test_generate_string_literal(self):
+        gen = PythonGenerator()
+        node = StringNode('"Hello"')
+        result = gen.generate(node)
+        assert result == '"Hello"'
+
+
+class TestLetExpressions:
+    def test_generate_simple_let(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(let ((x 5)) (+ x 2))")
+        assert result == "(lambda x: (x + 2))(5)"
+
+    def test_generate_multiple_bindings_let(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(let ((x 1) (y 2)) (+ x y))")
+        assert result == "(lambda x, y: (x + y))(1, 2)"
+
+    def test_generate_empty_let(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(let () 42)")
+        assert result == "42"
+
+    def test_let_error_wrong_args(self):
+        gen = PythonGenerator()
+        node = ListNode([
+            SymbolNode("let"),
+            NumberNode(5)
+        ])
+        with pytest.raises(SyntaxError, match="let requires exactly 2 arguments"):
+            gen.generate(node)
+
+
+class TestCondExpressions:
+    def test_generate_simple_cond(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(cond ((> x 0) 1) ((< x 0) -1))")
+        assert result == "(1 if (x > 0) else (-1 if (x < 0) else None))"
+
+    def test_generate_single_clause_cond(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(cond ((= x 0) 0))")
+        assert result == "(0 if (x == 0) else None)"
+
+    def test_cond_error_no_clauses(self):
+        gen = PythonGenerator()
+        node = ListNode([SymbolNode("cond")])
+        with pytest.raises(SyntaxError, match="cond requires at least one clause"):
+            gen.generate(node)
+
+
+class TestListOperations:
+    def test_generate_car(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(car lst)")
+        assert result == "lst[0]"
+
+    def test_generate_cdr(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(cdr lst)")
+        assert result == "lst[1:]"
+
+    def test_generate_cons(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(cons 1 lst)")
+        assert result == "[1] + lst"
+
+    def test_generate_length(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(length lst)")
+        assert result == "len(lst)"
+
+    def test_generate_append(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret("(append lst1 lst2)")
+        assert result == "lst1 + lst2"
+
+    def test_car_error_wrong_args(self):
+        gen = PythonGenerator()
+        node = ListNode([SymbolNode("car")])
+        with pytest.raises(SyntaxError, match="car requires exactly 1 argument"):
+            gen.generate(node)
+
+    def test_cons_error_wrong_args(self):
+        gen = PythonGenerator()
+        node = ListNode([SymbolNode("cons"), NumberNode(1)])
+        with pytest.raises(SyntaxError, match="cons requires exactly 2 arguments"):
+            gen.generate(node)
+
+
+class TestComplexExpressions:
+    def test_nested_let_and_cond(self):
+        interpreter = LispToPythonInterpreter()
+        lisp_code = "(let ((x 5) (y 10)) (cond ((> x y) x) ((< x y) y)))"
+        result = interpreter.interpret(lisp_code)
+        expected = "(lambda x, y: (x if (x > y) else (y if (x < y) else None)))(5, 10)"
+        assert result == expected
+
+    def test_list_operations_with_let(self):
+        interpreter = LispToPythonInterpreter()
+        lisp_code = "(let ((lst (cons 1 (cons 2 ())))) (car lst))"
+        result = interpreter.interpret(lisp_code)
+        expected = "(lambda lst: lst[0])([1] + [2] + [])"
+        assert result == expected
+
+    def test_string_in_function_call(self):
+        interpreter = LispToPythonInterpreter()
+        result = interpreter.interpret('(print "Hello, World!")')
+        assert result == 'print("Hello, World!")'
