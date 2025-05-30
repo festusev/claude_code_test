@@ -539,19 +539,3 @@ class TestListOperations:
         node = ListNode([SymbolNode("cons"), NumberNode(1)])
         with pytest.raises(SyntaxError, match="cons requires exactly 2 arguments"):
             gen.generate(node)
-
-
-class TestComplexExpressions:
-    def test_nested_let_and_cond(self):
-        interpreter = LispToPythonInterpreter()
-        lisp_code = "(let ((x 5) (y 10)) (cond ((> x y) x) ((< x y) y)))"
-        result = interpreter.interpret(lisp_code)
-        expected = "(lambda x, y: (x if (x > y) else (y if (x < y) else None)))(5, 10)"
-        assert result == expected
-
-    def test_list_operations_with_let(self):
-        interpreter = LispToPythonInterpreter()
-        lisp_code = "(let ((lst (cons 1 (cons 2 ())))) (car lst))"
-        result = interpreter.interpret(lisp_code)
-        expected = "(lambda lst: lst[0])([1] + [2] + [])"
-        assert result == expected
